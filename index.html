@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Le Chochoille</title>
+<style>
+  :root { --bg:#0f1220; --card:#181c30; --ink:#e9ecff; --muted:#9aa3c7; --accent:#6aa7ff; --danger:#ff6a6a; --ok:#79e17b; }
+  * { box-sizing:border-box }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:linear-gradient(180deg,#0b0e1a,#0f1220); color:var(--ink); }
+  header { padding:16px 20px; border-bottom:1px solid #22263d; display:flex; gap:12px; align-items:center; justify-content:space-between;}
+  header h1 { margin:0; font-size:22px; letter-spacing:.5px;}
+  main { max-width:1000px; margin:20px auto 60px; padding:0 16px; display:grid; grid-template-columns: 320px 1fr; gap:16px; }
+  .panel { background:var(--card); border:1px solid #22263d; border-radius:14px; padding:14px; }
+  .panel h2 { margin:.2rem 0 .6rem; font-size:16px; color:#cbd3ff; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  input, select, button, textarea {
+    background:#0f1326; color:var(--ink); border:1px solid #2a3052; border-radius:10px; padding:10px 12px; font-size:14px;
+  }
+  button { cursor:pointer; border:1px solid #3a4a7d; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
+  button.primary { background:#10224a; border-color:#5c84ff; }
+  button:disabled { opacity:.6; cursor:not-allowed; }
+  .players { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { background:#11152a; border:1px solid #2a3158; padding:6px 10px; border-radius:999px; font-size:13px;}
+  .roles { display:grid; grid-template-columns:1fr; gap:8px; }
+  .role { background:#10142a; border:1px dashed #2a3158; border-radius:12px; padding:8px 10px; display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:12px; padding:3px 8px; border-radius:999px; background:#13244a; border:1px solid #3558a6; }
+  .badge.empty { opacity:.6; border-style:dotted;}
+  .status { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+  .status .tag { border:1px solid #2a3158; padding:6px 10px; border-radius:999px; font-size:12px; background:#0f1326;}
+  .bigcard { display:flex; align-items:center; justify-content:center; height:230px; border-radius:16px; border:1px solid #2a3158; background:#0f1326; }
+  .cardtext { font-size:64px; line-height:1; }
+  .explain { margin-top:10px; font-size:14px; color:var(--muted); line-height:1.4;}
+  .controls { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;}
+  .history { max-height:280px; overflow:auto; border-radius:12px; border:1px solid #2a3158; }
+  .history ul { list-style:none; margin:0; padding:0; }
+  .history li { border-bottom:1px solid #1f2442; padding:8px 10px; font-size:14px; }
+  .muted { color:var(--muted); }
+  .danger { color:#ff6a6a; }
+  .ok { color:#79e17b; }
+  .footer { text-align:center; color:#7d86b2; font-size:12px; padding:8px 0 18px;}
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  details summary { cursor:pointer; }
+  .diag { font-size:12px; }
+  .pass { color:#79e17b; }
+  .fail { color:#ff6a6a; }
+
+  /* Bandeau statut JS */
+  .js-banner { position:fixed; left:8px; bottom:8px; font-size:12px; padding:6px 10px; border-radius:999px; background:#0f1326; border:1px solid #2a3158; color:#9aa3c7; z-index:9999; }
+  .js-banner.bad { color:#ffb4b4; border-color:#ff8b8b; }
+  @media (max-width:900px){ main{ grid-template-columns:1fr; } }
+</style>
+
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0f1220">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+      });
+    }
+  </script>
+
+</head>
+<body>
+  <div id="jsBanner" class="js-banner" aria-live="polite">Chargement…</div>
+
+  <header>
+    <h1>Le Chochoille 🍻</h1>
+    <div class="row">
+      <button type="button" data-action="newGame" class="primary">Nouvelle partie (mélanger)</button>
+      <button type="button" data-action="resetDeck">Remettre le paquet</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Colonne gauche : setup + rôles -->
+    <section class="panel">
+      <h2>Joueurs</h2>
+      <div class="row">
+        <input id="playerName" placeholder="Ajouter un prénom" autocomplete="off" />
+        <button type="button" data-action="addPlayer">Ajouter</button>
+        <button type="button" data-action="clearPlayers">Vider</button>
+      </div>
+      <div id="players" class="players" style="margin-top:8px;"></div>
+
+      <h2 style="margin-top:14px;">Rôles en cours</h2>
+      <div class="roles">
+        <div class="role"><span>👑 Maître du Chochoille (As)</span><span id="role-ace" class="badge empty">—</span></div>
+        <div class="role"><span>❓ Reine des Questions (Dame)</span><span id="role-queen" class="badge empty">—</span></div>
+        <div class="role"><span>🧊 Maître du Freeze (8)</span><span id="role-freeze" class="badge empty">—</span></div>
+      </div>
+
+      <h2 style="margin-top:14px;">Paramètres courant</h2>
+      <div class="status">
+        <div class="tag">Sens des 9 : <strong id="sens9">non défini</strong></div>
+        <div class="tag">Mot banni (Roi) : <strong id="bannedWord">—</strong></div>
+        <div class="tag">Valets tirés : <strong id="jackCount">0</strong>/4</div>
+      </div>
+
+      <h2 style="margin-top:14px;">Règles inventées (7)</h2>
+      <div class="row">
+        <input id="customRule" placeholder="Règle ajoutée par un 7…" />
+        <button type="button" data-action="addRule">Ajouter</button>
+      </div>
+      <div id="rulesList" class="history" style="margin-top:8px;">
+        <ul></ul>
+      </div>
+
+      <h2 style="margin-top:14px;">Mots bannis (Roi)</h2>
+      <div class="row">
+        <input id="bannedInput" placeholder="Ajouter un mot banni…" />
+        <button type="button" data-action="addBanned">Ajouter</button>
+      </div>
+      <div id="bannedList" class="history" style="margin-top:8px;">
+        <ul></ul>
+      </div>
+
+      <details style="margin-top:14px;" class="diag">
+        <summary>Diagnostics (tests auto)</summary>
+        <div class="row" style="margin:8px 0;">
+          <button type="button" data-action="runTests">Re-exécuter les tests</button>
+        </div>
+        <ul id="diagList" class="history" style="max-height:200px;"></ul>
+      </details>
+    </section>
+
+    <!-- Colonne droite : jeu -->
+    <section class="panel">
+      <div class="two-col">
+        <div>
+          <h2>Tour</h2>
+          <div class="row">
+            <select id="currentPlayer"></select>
+            <button type="button" data-action="nextPlayer">Suivant</button>
+          </div>
+        </div>
+        <div>
+          <h2>Paquet</h2>
+          <div class="row">
+            <div class="tag">Cartes restantes : <strong id="remaining">0</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="margin-top:10px;">Carte tirée</h2>
+      <div id="card" class="bigcard"><span class="muted" style="font-size:14px;">—</span></div>
+      <div id="effect" class="explain muted">Clique sur “Tirer une carte”.</div>
+
+      <div class="controls">
+        <button type="button" data-action="draw" class="primary">Tirer une carte</button>
+        <button type="button" data-action="chooseDuel">Choisir dos à dos (10)</button>
+      </div>
+
+      <h2 style="margin-top:14px;">Historique</h2>
+      <div class="history">
+        <ul id="logList"></ul>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">Tirage aléatoire à chaque partie. Rôles affichés en temps réel. Un joueur peut cumuler plusieurs rôles.</div>
+
+<script defer>
+(function(){
+  /* ===== Helpers ===== */
+  function $(id){ return document.getElementById(id); }
+  function text(id,val){ var n=$(id); if(n) n.textContent=val; }
+  function trim(s){ return (s||'').replace(/^\s+|\s+$/g,''); }
+
+  /* ===== Data ===== */
+  var suits=[{s:'\u2660',color:'noir',name:'Pique'},{s:'\u2665',color:'rouge',name:'C\u0153ur'},{s:'\u2663',color:'noir',name:'Tr\u00e8fle'},{s:'\u2666',color:'rouge',name:'Carreau'}];
+  var ranks=['A','K','Q','J','10','9','8','7','6','5','4','3','2'];
+  var deck=[], players=[], playerIndex=0, roles={ace:null,queen:null,freeze:null}, bannedWords=[], sens9=null, jackCount=0, rules=[], logs=[];
+
+  /* ===== Deck ===== */
+  function buildDeck(){ var d=[],i,j; for(i=0;i<suits.length;i++){ for(j=0;j<ranks.length;j++){ d.push({rank:ranks[j],suit:suits[i].s,suitName:suits[i].name,color:suits[i].color}); } } return d; }
+  function shuffle(a){ var i,j,t; for(i=a.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+
+  /* ===== Render ===== */
+  function renderPlayers(){
+    var wrap=$('players'); wrap.innerHTML='';
+    for(var i=0;i<players.length;i++){
+      var span=document.createElement('span');
+      span.className='chip';
+      span.textContent=players[i];
+      span.setAttribute('data-action','removePlayer');
+      span.setAttribute('data-index',i);
+      wrap.appendChild(span);
+    }
+    fillPlayerSelect();
+  }
+  function fillPlayerSelect(){
+    var sel=$('currentPlayer'); sel.innerHTML='';
+    for(var i=0;i<players.length;i++){ var opt=document.createElement('option'); opt.value=i; opt.textContent=players[i]; sel.appendChild(opt); }
+    sel.value=playerIndex;
+  }
+  function setRoleBadge(id,v){ var b=$(id); b.textContent=v?v:'—'; b.className='badge '+(v?'':'empty'); }
+  function pushLog(t){ logs.unshift(t); var ul=$('logList'); ul.innerHTML=''; for(var i=0;i<Math.min(logs.length,80);i++){ var li=document.createElement('li'); li.textContent=logs[i]; ul.appendChild(li); } }
+
+  function renderBannedStatus(){ text('bannedWord', bannedWords.length ? (bannedWords[bannedWords.length-1] + ' (' + bannedWords.length + ')') : '—'); }
+  function renderBannedList(){
+    var ul=$('bannedList').getElementsByTagName('ul')[0]; ul.innerHTML='';
+    for(var i=0;i<bannedWords.length;i++){ (function(i){
+      var li=document.createElement('li');
+      var btn=document.createElement('button'); btn.type='button'; btn.textContent='✖'; btn.style.marginRight='8px';
+      btn.setAttribute('data-action','removeBanned'); btn.setAttribute('data-index',i);
+      li.appendChild(btn); li.appendChild(document.createTextNode(bannedWords[i])); ul.appendChild(li);
+    })(i); }
+  }
+
+  function RANK_DISPLAY(r){ return r==='Q'?'D':r; }
+  function renderCardText(c){ $('card').innerHTML='<span class="cardtext">'+RANK_DISPLAY(c.rank)+' '+c.suit+'</span>'; }
+  function describeCard(c){ return RANK_DISPLAY(c.rank)+' de '+c.suitName+' '+c.suit; }
+
+  /* ===== Rules ===== */
+  function applyRules(card, player){
+    var msg='';
+    switch(card.rank){
+      case 'A': roles.ace=player; setRoleBadge('role-ace',roles.ace); msg='👑 '+player+' devient Maître du Chochoille jusqu\'au prochain As.'; break;
+      case 'K': try{ $('bannedInput').focus(); }catch(e){} msg='🚫 '+player+' peut ajouter un mot banni (section à gauche).'; break;
+      case 'Q': roles.queen=player; setRoleBadge('role-queen',roles.queen); msg='❓ '+player+' devient Reine des Questions jusqu\'à la prochaine Dame.'; break;
+      case 'J': jackCount++; text('jackCount',jackCount); var palier=(jackCount===1)?'2 gorgées':(jackCount===2)?'4 gorgées':(jackCount===3)?'8 gorgées':'cul sec'; var theme=window.prompt(player+' a tiré un Valet.\nChoisis un thème :'); msg='🃏 Thème choisi par '+player+(theme?(' : “'+theme+'”'):'')+'. Palier : '+palier+'.'; break;
+      case '10': msg='🔫 '+player+' doit choisir 2 joueurs pour un dos à dos (bouton “Choisir dos à dos”).'; break;
+      case '9': if(!sens9){ sens9=window.confirm(player+' a tiré un 9.\nOK = droite →, Annuler = gauche ←')?'droite':'gauche'; } else { sens9=(sens9==='droite')?'gauche':'droite'; } text('sens9',sens9); msg='9 : 2 gorgées à '+sens9+'. Le prochain 9 inversera le sens.'; break;
+      case '8': roles.freeze=player; setRoleBadge('role-freeze',roles.freeze); msg='🧊 '+player+' devient Maître du Freeze jusqu\'au prochain 8.'; break;
+      case '7': msg='🛠 '+player+' doit inventer une règle (ajoute-la dans la section dédiée).'; break;
+      default:
+        var v=parseInt(card.rank,10);
+        if(v>=2&&v<=6){ msg = (card.color==='noir') ? ('⚫ '+player+' boit '+v+' gorgée'+(v>1?'s':'' )+'.') : ('🔴 '+player+' donne '+v+' gorgée'+(v>1?'s':'')+' (répartir comme il/elle veut).'); }
+        else { msg='Carte sans effet spécial.'; }
+    }
+    return msg;
+  }
+
+  /* ===== Game flow ===== */
+  function newGame(){
+    deck=shuffle(buildDeck()); text('remaining',deck.length);
+    logs=[]; rules=[]; $('rulesList').getElementsByTagName('ul')[0].innerHTML='';
+    bannedWords=[]; sens9=null; jackCount=0; text('jackCount','0');
+    roles={ace:null,queen:null,freeze:null};
+    setRoleBadge('role-ace',null); setRoleBadge('role-queen',null); setRoleBadge('role-freeze',null);
+    renderBannedList(); renderBannedStatus(); text('sens9','non défini');
+    $('card').innerHTML='<span class="muted" style="font-size:14px;">—</span>';
+    text('effect','Nouveau paquet mélangé. À toi de jouer !'); $('effect').className='explain';
+    pushLog('🆕 Nouvelle partie — paquet mélangé aléatoirement.');
+  }
+  function resetDeck(){ deck=shuffle(buildDeck()); text('remaining',deck.length); pushLog('♻️ Paquet remis et mélangé.'); }
+  function drawCard(){
+    if(players.length===0){ window.alert('Ajoute au moins un joueur.'); return; }
+    if(deck.length===0){ window.alert('Plus de cartes. Remets le paquet.'); return; }
+    var card=deck.pop(); text('remaining',deck.length); renderCardText(card);
+    var current=players[playerIndex]||'Joueur'; var effect=applyRules(card,current);
+    text('effect', describeCard(card)+' — '+effect); $('effect').className='explain';
+    pushLog(current+' tire '+describeCard(card)+'. '+effect);
+    playerIndex=(playerIndex+1)%players.length; fillPlayerSelect();
+  }
+  function chooseDuel(){
+    if(players.length<2){ window.alert('Besoin d’au moins 2 joueurs.'); return; }
+    var a=window.prompt('Joueur 1 pour dos à dos (prénom exact) :'); var b=window.prompt('Joueur 2 pour dos à dos (prénom exact) :');
+    if(!a||!b) return; var okA=false,okB=false,i; for(i=0;i<players.length;i++){ if(players[i]===a) okA=true; if(players[i]===b) okB=true; }
+    if(!okA||!okB){ window.alert('Prénom introuvable.'); return; }
+    pushLog('🤜🤛 Dos à dos entre '+a+' et '+b+'.'); text('effect','Dos à dos entre '+a+' et '+b+' !');
+  }
+  function addCustomRule(){
+    var inp=$('customRule'); var txt=trim(inp.value); if(!txt) return;
+    rules.unshift(txt); var ul=$('rulesList').getElementsByTagName('ul')[0]; var li=document.createElement('li'); li.textContent='• '+txt;
+    if(ul.firstChild) ul.insertBefore(li,ul.firstChild); else ul.appendChild(li); inp.value='';
+  }
+  function addBannedWord(){
+    var w=trim($('bannedInput').value); if(!w) return;
+    bannedWords.push(w); renderBannedList(); renderBannedStatus(); pushLog('🚫 Mot banni ajouté : '+w); $('bannedInput').value='';
+  }
+
+  /* ===== Diagnostics ===== */
+  function diagLog(ok,label,detail){ var ul=$('diagList'); var li=document.createElement('li'); li.className=ok?'pass':'fail'; li.textContent=(ok?'✔ ':'✖ ')+label+(detail?' — '+detail:''); ul.appendChild(li); }
+  function runDiagnostics(){
+    var cont=$('diagList'); cont.innerHTML='';
+    var snap={ cardHTML:$('card').innerHTML, bannedWords:bannedWords.slice(0), bannedStatus:$('bannedWord').textContent };
+    try{
+      var d=buildDeck(); diagLog(d.length===52,'Le paquet contient 52 cartes');
+      var bySuit={},i; for(i=0;i<d.length;i++){ var s=d[i].suit; bySuit[s]=(bySuit[s]||0)+1; } var ok=true; for(var k in bySuit){ if(bySuit.hasOwnProperty(k)&&bySuit[k]!==13) ok=false; } diagLog(ok,'Répartition: 13 par symbole');
+      var c={rank:'Q',suit:'\u2665',suitName:'C\u0153ur',color:'rouge'}; renderCardText(c); var t=$('card').innerText.replace(/^\s+|\s+$/g,''); diagLog(t.indexOf('D')>-1 && t.indexOf('\u2665')>-1,'Affichage texte: Dame -> "D" + emoji');
+      var before=bannedWords.length; bannedWords=[]; renderBannedList(); renderBannedStatus(); $('bannedInput').value='testban'; addBannedWord(); diagLog(bannedWords.length===before+1 || bannedWords.length===1,'Ajout de mot banni (UI)');
+    }catch(e){ diagLog(false,'Exception dans les tests',(e && (e.message||e.toString()))); }
+    finally{ $('card').innerHTML=snap.cardHTML; bannedWords=snap.bannedWords; renderBannedList(); text('bannedWord',snap.bannedStatus); }
+  }
+
+  /* ===== Actions routing (délégation) ===== */
+  var actions={
+    newGame: function(){ newGame(); },
+    resetDeck: function(){ resetDeck(); },
+    addPlayer: function(){ var name=trim($('playerName').value); if(!name) return; for(var i=0;i<players.length;i++){ if(players[i]===name){ window.alert('Ce prénom est déjà ajouté.'); return; } } players.push(name); $('playerName').value=''; renderPlayers(); },
+    clearPlayers: function(){ players=[]; renderPlayers(); },
+    nextPlayer: function(){ if(players.length){ playerIndex=(playerIndex+1)%players.length; fillPlayerSelect(); } },
+    draw: function(){ drawCard(); },
+    chooseDuel: function(){ chooseDuel(); },
+    addRule: function(){ addCustomRule(); },
+    addBanned: function(){ addBannedWord(); },
+    runTests: function(){ runDiagnostics(); },
+    removeBanned: function(idx){ bannedWords.splice(idx,1); renderBannedList(); renderBannedStatus(); },
+    removePlayer: function(idx){ players.splice(idx,1); if(playerIndex>=players.length) playerIndex=0; renderPlayers(); }
+  };
+
+  /* Global select change */
+  function onSelectChange(e){
+    var t=e.target||e.srcElement;
+    if(t && t.id==='currentPlayer'){ playerIndex=parseInt(t.value,10)||0; }
+  }
+
+  /* Click delegation */
+  function onClick(e){
+    var node=e.target||e.srcElement;
+    while(node && node!==document){
+      var act=node.getAttribute && node.getAttribute('data-action');
+      if(act){
+        e.preventDefault && e.preventDefault();
+        var idxAttr=node.getAttribute('data-index');
+        if(typeof actions[act]==='function'){
+          if(idxAttr!==null && idxAttr!==undefined){ actions[act](parseInt(idxAttr,10)); }
+          else { actions[act](); }
+        }
+        return;
+      }
+      node=node.parentNode;
+    }
+  }
+
+  /* ===== Boot ===== */
+  function boot(){
+    try{
+      document.addEventListener('click', onClick, false);
+      document.addEventListener('change', onSelectChange, false);
+      newGame();
+      runDiagnostics();
+      var b=$('jsBanner'); if(b){ b.textContent='JS OK'; }
+    }catch(err){
+      var b=$('jsBanner'); if(b){ b.textContent='Erreur: '+(err.message||err); b.className+=' bad'; }
+    }
+  }
+
+  /* Catch global errors (affiche en bas) */
+  window.onerror=function(msg,src,lin,col,err){
+    var b=$('jsBanner'); if(b){ b.textContent='Erreur: '+msg; b.className+=' bad'; }
+  };
+
+  // DOM prêt (script "defer" => DOM dispo, mais on sécurise)
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', boot, {once:true}); } else { boot(); }
+})();
+</script>
+</body>
+</html>
