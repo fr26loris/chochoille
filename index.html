@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Le Chochoille — Mobile</title>
+<style>
+  :root {
+    --bg:#0f1220; --card:#181c30; --ink:#e9ecff; --muted:#9aa3c7;
+    --accent:#6aa7ff; --danger:#ff6a6a; --ok:#79e17b;
+    --hair:#22263d; --ring:#3a4a7d;
+  }
+
+  /* ---------- Reset + base (mobile-first) ---------- */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background:linear-gradient(180deg,#0b0e1a,#0f1220);
+    color:var(--ink);
+    font-size: 16px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  a, button, input, select, textarea { font: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- Header (sticky) ---------- */
+  header {
+    position: sticky; top: 0; z-index: 50;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--hair);
+    display:flex; gap:12px; align-items:center; justify-content:space-between;
+    background:rgba(15,18,32,.8);
+    backdrop-filter: blur(8px);
+    padding-top: calc(12px + env(safe-area-inset-top));
+  }
+  header h1 { margin:0; font-size: clamp(18px, 4vw, 22px); letter-spacing:.5px; }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+  /* ---------- Layout (mobile-first single column) ---------- */
+  main {
+    max-width: 1024px;
+    margin: 14px auto 80px;
+    padding: 0 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* Switch to two columns on wider screens */
+  @media (min-width: 900px){
+    main { grid-template-columns: 320px 1fr; gap: 16px; margin-bottom: 60px; }
+  }
+
+  .panel {
+    background:var(--card);
+    border:1px solid var(--hair);
+    border-radius:14px; padding:12px;
+  }
+  .panel h2 { margin:.2rem 0 .6rem; font-size: 15px; color:#cbd3ff; }
+
+  /* ---------- Form controls: comfortable touch targets ---------- */
+  input, select, button, textarea {
+    background:#0f1326; color:var(--ink);
+    border:1px solid #2a3052; border-radius:12px;
+    padding:12px 14px; font-size:16px; min-height: 44px;
+  }
+  select { padding-right: 36px; }
+  button { cursor:pointer; border:1px solid var(--ring);
+           touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  button.primary { background:#10224a; border-color:#5c84ff; }
+  button:disabled { opacity:.6; cursor:not-allowed; }
+
+  /* ---------- Chips / lists ---------- */
+  .players { display:flex; gap:6px; flex-wrap:wrap; }
+  .chip { background:#11152a; border:1px solid #2a3158; padding:8px 12px;
+          border-radius:999px; font-size:14px; line-height:1; }
+  .chip:active { transform: scale(.98); }
+
+  .roles { display:grid; grid-template-columns:1fr; gap:8px; }
+  .role { background:#10142a; border:1px dashed #2a3158; border-radius:12px;
+          padding:10px 12px; display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:12px; padding:6px 10px; border-radius:999px; background:#13244a; border:1px solid #3558a6; }
+  .badge.empty { opacity:.6; border-style:dotted;}
+
+  .status { display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; }
+  .status .tag { border:1px solid #2a3158; padding:8px 12px; border-radius:999px; font-size:13px; background:#0f1326; }
+
+  /* ---------- Card area ---------- */
+  .bigcard {
+    display:flex; align-items:center; justify-content:center;
+    height: clamp(180px, 34vh, 320px);
+    border-radius:16px; border:1px solid #2a3158; background:#0f1326;
+    position: relative; overflow: hidden;
+  }
+  .cardtext { font-size: clamp(44px, 14vw, 72px); line-height:1; }
+
+  .explain { margin-top:10px; font-size:15px; color:var(--muted); line-height:1.45; }
+
+  /* ---------- Scrollable lists ---------- */
+  .history { max-height: min(38vh, 320px); overflow:auto; border-radius:12px; border:1px solid #2a3158; }
+  .history ul { list-style:none; margin:0; padding:0; }
+  .history li { border-bottom:1px solid #1f2442; padding:10px 12px; font-size:15px; }
+
+  /* ---------- Controls: sticky on small screens ---------- */
+  .controls {
+    display:flex; gap:8px; flex-wrap:wrap; margin-top:10px;
+    position: sticky; bottom: calc(env(safe-area-inset-bottom) + 8px);
+    padding-bottom: env(safe-area-inset-bottom);
+    background: linear-gradient(180deg, rgba(24,28,48,0), rgba(24,28,48,.8));
+    backdrop-filter: blur(4px);
+  }
+  @media (min-width: 900px){ .controls { position: static; background: none; backdrop-filter:none; } }
+
+  .footer { text-align:center; color:#7d86b2; font-size:12px; padding:12px 0 18px; }
+
+  .two-col { display:grid; grid-template-columns:1fr; gap:12px; }
+  @media (min-width: 520px){ .two-col { grid-template-columns:1fr 1fr; } }
+
+  details summary { cursor:pointer; }
+  .diag { font-size:12px; }
+  .pass { color:#79e17b; }
+  .fail { color:#ff6a6a; }
+
+  /* ---------- Modal (rules) ---------- */
+  .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.55); display:none;
+                    align-items:center; justify-content:center; padding:16px; z-index:9999;}
+  .modal-backdrop.show { display:flex; }
+  .modal { width:min(760px,100%); max-height:85vh; overflow:auto;
+           background:var(--card); border:1px solid #2a3158; border-radius:16px;
+           box-shadow:0 10px 30px rgba(0,0,0,.6); }
+  .modal header { display:flex; align-items:center; justify-content:space-between;
+                  padding:12px 14px; border-bottom:1px solid var(--hair); position: sticky; top:0;
+                  background: rgba(24,28,48,.9); backdrop-filter: blur(6px); }
+  .modal header h3 { margin:0; font-size:18px; color:#cbd3ff; }
+  .modal .content { padding:14px; }
+  .modal .content ul { margin:0; padding-left:18px; line-height:1.5; }
+  .modal .content li { margin:8px 0; }
+  .close-x { background:#11152a; border:1px solid #2a3158; border-radius:10px; padding:10px 12px; }
+
+  /* ---------- Motion preferences ---------- */
+  @media (prefers-reduced-motion: reduce){
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1220">
+
+</head>
+<body>
+  <header>
+    <h1>Le Chochoille 🍻</h1>
+    <div class="row">
+      <button id="newGame" class="primary" type="button">Nouvelle partie</button>
+      <button id="resetDeck" type="button">Remettre le paquet</button>
+      <button id="showRules" type="button">Règles</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- Colonne gauche : setup + rôles -->
+    <section class="panel">
+      <h2>Joueurs</h2>
+      <div class="row">
+        <input id="playerName" placeholder="Ajouter un prénom" autocomplete="off" inputmode="text" />
+        <button id="addPlayer" type="button" aria-label="Ajouter le joueur">Ajouter</button>
+        <button id="clearPlayers" type="button">Vider</button>
+      </div>
+      <div id="players" class="players" style="margin-top:8px;"></div>
+
+      <h2 style="margin-top:14px;">Rôles en cours</h2>
+      <div class="roles">
+        <div class="role"><span>👑 Maître du Chochoille (As)</span><span id="role-ace" class="badge empty">—</span></div>
+        <div class="role"><span>❓ Reine des Questions (Dame)</span><span id="role-queen" class="badge empty">—</span></div>
+        <div class="role"><span>🧊 Maître du Freeze (8)</span><span id="role-freeze" class="badge empty">—</span></div>
+      </div>
+
+      <h2 style="margin-top:14px;">Paramètres</h2>
+      <div class="status">
+        <div class="tag">Sens des 9 : <strong id="sens9">non défini</strong></div>
+        <div class="tag">Mot banni (Roi) : <strong id="bannedWord">—</strong></div>
+        <div class="tag">Valets tirés : <strong id="jackCount">0</strong>/4</div>
+      </div>
+
+      <h2 style="margin-top:14px;">Règles inventées (7)</h2>
+      <div class="row">
+        <input id="customRule" placeholder="Règle ajoutée par un 7…" />
+        <button id="addRule" type="button">Ajouter</button>
+      </div>
+      <div id="rulesList" class="history" style="margin-top:8px;">
+        <ul></ul>
+      </div>
+
+      <h2 style="margin-top:14px;">Mots bannis (Roi)</h2>
+      <div class="row">
+        <input id="bannedInput" placeholder="Ajouter un mot banni…" />
+        <button id="addBanned" type="button">Ajouter</button>
+      </div>
+      <div id="bannedList" class="history" style="margin-top:8px;">
+        <ul></ul>
+      </div>
+    </section>
+
+    <!-- Colonne droite : jeu -->
+    <section class="panel">
+      <div class="two-col">
+        <div>
+          <h2>Tour</h2>
+          <div class="row">
+            <select id="currentPlayer"></select>
+            <button id="nextPlayer" type="button">Suivant</button>
+          </div>
+        </div>
+        <div>
+          <h2>Paquet</h2>
+          <div class="row">
+            <div class="tag">Cartes restantes : <strong id="remaining">0</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <h2 style="margin-top:10px;">Carte tirée</h2>
+      <div id="card" class="bigcard"><span class="muted" style="font-size:14px;">—</span></div>
+      <div id="effect" class="explain muted">Clique sur “Tirer une carte”.</div>
+
+      <div class="controls">
+        <button id="draw" class="primary" type="button">Tirer une carte</button>
+        <button id="chooseDuel" type="button">Choisir dos à dos (10)</button>
+      </div>
+
+      <h2 style="margin-top:14px;">Historique</h2>
+      <div class="history">
+        <ul id="history"></ul>
+      </div>
+    </section>
+  </main>
+
+  <div class="footer">Tirage aléatoire à chaque partie. Rôles affichés en temps réel. Un joueur peut cumuler plusieurs rôles.</div>
+
+  <!-- -------- Modal Règles -------- -->
+  <div id="rulesModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+      <header>
+        <h3 id="rulesTitle">Règles du Chochoille</h3>
+        <button id="closeRules" class="close-x" type="button">Fermer</button>
+      </header>
+      <div class="content">
+        <ul>
+          <li><strong>As</strong> — Maître du Chochoille jusqu’au prochain As.</li>
+          <li><strong>Roi</strong> — Bannit un mot. Si quelqu’un dit ce mot → <em>1 gorgée</em> pour la personne qui l’a dit.</li>
+          <li><strong>Dame</strong> — Reine des Questions. Toute personne qui répond à une question de la reine → <em>1 gorgée</em>.</li>
+          <li><strong>Valet</strong> — Choisit un thème. 1er Valet: <em>2 gorgées</em> · 2e: <em>4</em> · 3e: <em>8</em> · 4e: <em>cul sec</em>.</li>
+          <li><strong>10</strong> — Le tireur choisit 2 joueurs pour un <em>dos à dos</em>. Les autres posent des questions aux deux joueurs dos à dos; ils répondent en se désignant du doigt. <em>1 gorgée</em> pour chaque mauvaise réponse des duellistes. Pour chaque bonne réponse, <em>les poseurs de questions boivent 1 gorgée</em>.</li>
+          <li><strong>9</strong> — <em>2 gorgées</em> à gauche ou à droite. Le <em>premier 9</em> fixe le sens (gauche/droite). Chaque 9 suivant <em>inverse</em> le sens.</li>
+          <li><strong>8</strong> — Maître du Freeze jusqu’au prochain 8. Il dit <em>“freeze”</em> (plus personne ne bouge) puis <em>“defreeze”</em>. <em>1 gorgée</em> pour chaque personne que le Maître du Freeze <em>voit</em> bouger.</li>
+          <li><strong>7</strong> — Invente une règle.</li>
+          <li><strong>2 à 6 noirs</strong> — Le joueur <em>boit</em> le nombre de gorgées indiqué.</li>
+          <li><strong>2 à 6 rouges</strong> — Le joueur <em>donne</em> le nombre de gorgées indiqué.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ------------------ Utilitaires cartes ------------------ */
+const suits = [
+  {s:'♠', color:'noir', name:'Pique'},
+  {s:'♥', color:'rouge', name:'Cœur'},
+  {s:'♣', color:'noir', name:'Trèfle'},
+  {s:'♦', color:'rouge', name:'Carreau'}
+];
+const ranks = ['A','K','Q','J','10','9','8','7','6','5','4','3','2']; // 52 cartes, sans jokers
+
+let deck = [];
+function buildDeck() {
+  const d = [];
+  for (const suit of suits) {
+    for (const r of ranks) {
+      d.push({ rank:r, suit:suit.s, suitName:suit.name, color:suit.color });
+    }
+  }
+  return d;
+}
+function shuffle(array) {
+  for (let i=array.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+/* ------------------ État de la partie ------------------ */
+let players = [];
+let playerIndex = 0;
+let roles = { ace:null, queen:null, freeze:null };
+let bannedWords = [];
+let sens9 = null; // 'gauche' ou 'droite'
+let jackCount = 0;
+let rules = [];
+let history = [];
+
+/* ------------------ DOM helpers ------------------ */
+const el = id => document.getElementById(id);
+function renderPlayers() {
+  const wrap = el('players'); wrap.innerHTML='';
+  players.forEach((p,i)=>{
+    const span = document.createElement('span');
+    span.className='chip';
+    span.textContent = p;
+    span.title = 'Clique pour retirer';
+    span.style.cursor='pointer';
+    span.onclick=()=>{ players.splice(i,1); if (playerIndex>=players.length) playerIndex=0; fillPlayerSelect(); renderPlayers(); };
+    wrap.appendChild(span);
+  });
+  fillPlayerSelect();
+}
+function fillPlayerSelect() {
+  const sel = el('currentPlayer'); sel.innerHTML='';
+  players.forEach((p,i)=>{
+    const opt = document.createElement('option');
+    opt.value=i; opt.textContent=p; sel.appendChild(opt);
+  });
+  sel.value = playerIndex;
+}
+function setRoleBadge(id, value) {
+  const b = el(id);
+  b.textContent = value ? value : '—';
+  b.className = 'badge ' + (value ? '' : 'empty');
+}
+function pushHistory(text) {
+  history.unshift(text);
+  const ul = el('history'); ul.innerHTML='';
+  history.slice(0,80).forEach(line=>{
+    const li = document.createElement('li'); li.textContent=line; ul.appendChild(li);
+  });
+}
+
+/* ----- Mots bannis UI ----- */
+function renderBannedStatus(){
+  const disp = bannedWords.length ? `${bannedWords[bannedWords.length-1]} (${bannedWords.length})` : '—';
+  el('bannedWord').textContent = disp;
+}
+function renderBannedList(){
+  const ul = el('bannedList').querySelector('ul');
+  ul.innerHTML='';
+  bannedWords.forEach((w,i)=>{
+    const li = document.createElement('li');
+    const btn = document.createElement('button');
+    btn.textContent = '✖';
+    btn.type = 'button';
+    btn.style.marginRight = '8px';
+    btn.addEventListener('pointerup', ()=>{ bannedWords.splice(i,1); renderBannedList(); renderBannedStatus(); });
+    btn.addEventListener('click', ()=>{ bannedWords.splice(i,1); renderBannedList(); renderBannedStatus(); });
+    li.appendChild(btn);
+    li.appendChild(document.createTextNode(w));
+    ul.appendChild(li);
+  });
+}
+function addBannedWord(){
+  const inp = el('bannedInput');
+  const w = (inp.value||'').trim();
+  if(!w) return;
+  bannedWords.push(w);
+  renderBannedList();
+  renderBannedStatus();
+  pushHistory(`🚫 Mot banni ajouté : ${w}`);
+  inp.value='';
+}
+
+/* ------------------ Affichage texte de la carte (pas d'images) ------------------ */
+const RANK_DISPLAY = r => (r==='Q' ? 'D' : r);
+function renderCardText(card){
+  const container = el('card');
+  container.innerHTML = `<span class="cardtext">${RANK_DISPLAY(card.rank)} ${card.suit}</span>`;
+}
+
+/* ------------------ Règles & effets ------------------ */
+function describeCard(c) {
+  return `${RANK_DISPLAY(c.rank)} de ${c.suitName} ${c.suit}`;
+}
+function applyRules(card, player) {
+  let msg = '';
+
+  switch(card.rank){
+    case 'A':
+      roles.ace = player;
+      msg = `👑 ${player} devient Maître du Chochoille jusqu'au prochain As.`;
+      setRoleBadge('role-ace', roles.ace);
+      break;
+    case 'K':
+      const inputEl = el('bannedInput');
+      if (inputEl) { try { inputEl.focus({preventScroll:true}); } catch(e){} }
+      msg = `🚫 ${player} peut ajouter un mot banni (section à gauche).`;
+      break;
+    case 'Q':
+      roles.queen = player;
+      setRoleBadge('role-queen', roles.queen);
+      msg = `❓ ${player} devient Reine des Questions jusqu'à la prochaine Dame.`;
+      break;
+    case 'J':
+      jackCount++;
+      el('jackCount').textContent = jackCount;
+      const palier = jackCount===1? '2 gorgées' : jackCount===2? '4 gorgées' : jackCount===3? '8 gorgées' : 'cul sec';
+      const theme = prompt(`${player} a tiré un Valet.\nChoisis un thème :`);
+      msg = `🃏 Thème choisi par ${player}${theme?` : “${theme}”`:''}. Palier : ${palier}.`;
+      break;
+    case '10':
+      msg = `🔫 ${player} doit choisir 2 joueurs pour un dos à dos (bouton “Choisir dos à dos”).`;
+      break;
+    case '9':
+      if (!sens9) {
+        const choix = confirm(`${player} a tiré un 9.\nOK = droite →, Annuler = gauche ←`);
+        sens9 = choix ? 'droite' : 'gauche';
+      } else {
+        sens9 = sens9 === 'droite' ? 'gauche' : 'droite';
+      }
+      el('sens9').textContent = sens9;
+      msg = `9 : 2 gorgées à ${sens9}. Le prochain 9 inversera le sens.`;
+      break;
+    case '8':
+      roles.freeze = player;
+      setRoleBadge('role-freeze', roles.freeze);
+      msg = `🧊 ${player} devient Maître du Freeze jusqu'au prochain 8.`;
+      break;
+    case '7':
+      msg = `🛠 ${player} doit inventer une règle (ajoute-la dans la section dédiée).`;
+      break;
+    default:
+      const v = parseInt(card.rank,10);
+      if (v>=2 && v<=6) {
+        if (card.color==='noir') {
+          msg = `⚫ ${player} boit ${v} gorgée${v>1?'s':''}.`;
+        } else {
+          msg = `🔴 ${player} donne ${v} gorgée${v>1?'s':''} (répartir comme il/elle veut).`;
+        }
+      } else {
+        msg = `Carte sans effet spécial.`;
+      }
+  }
+  return msg;
+}
+
+/* ------------------ Flux de jeu ------------------ */
+function newGame() {
+  deck = shuffle(buildDeck());
+  el('remaining').textContent = deck.length;
+  history = [];
+  rules = [];
+  el('rulesList').querySelector('ul').innerHTML='';
+  bannedWords = [];
+  sens9 = null;
+  jackCount = 0; el('jackCount').textContent='0';
+  roles = { ace:null, queen:null, freeze:null };
+  setRoleBadge('role-ace', null);
+  setRoleBadge('role-queen', null);
+  setRoleBadge('role-freeze', null);
+  renderBannedList();
+  renderBannedStatus();
+  el('sens9').textContent = 'non défini';
+  el('card').innerHTML = '<span class="muted" style="font-size:14px;">—</span>';
+  el('effect').textContent = 'Nouveau paquet mélangé. À toi de jouer !';
+  el('effect').className = 'explain';
+  pushHistory('🆕 Nouvelle partie — paquet mélangé aléatoirement.');
+}
+
+function resetDeckSameOrder() {
+  deck = shuffle(buildDeck());
+  el('remaining').textContent = deck.length;
+  pushHistory('♻️ Paquet remis et mélangé.');
+}
+
+function drawCard() {
+  if (players.length===0) { alert('Ajoute au moins un joueur.'); return; }
+  if (deck.length===0) { alert('Plus de cartes. Remets le paquet.'); return; }
+
+  const card = deck.pop();
+  el('remaining').textContent = deck.length;
+
+  renderCardText(card);
+
+  const current = players[playerIndex] || 'Joueur';
+  const effect = applyRules(card, current);
+
+  el('effect').textContent = `${describeCard(card)} — ${effect}`;
+  el('effect').className = 'explain';
+
+  pushHistory(`${current} tire ${describeCard(card)}. ${effect}`);
+
+  playerIndex = (playerIndex + 1) % players.length;
+  fillPlayerSelect();
+}
+
+function chooseDuel() {
+  if (players.length<2) { alert('Besoin d’au moins 2 joueurs.'); return; }
+  const a = prompt('Joueur 1 pour dos à dos (prénom exact) :');
+  const b = prompt('Joueur 2 pour dos à dos (prénom exact) :');
+  if (!a || !b) return;
+  if (!players.includes(a) || !players.includes(b)) { alert('Prénom introuvable.'); return; }
+  pushHistory(`🤜🤛 Dos à dos entre ${a} et ${b}.`);
+  el('effect').textContent = `Dos à dos entre ${a} et ${b} !`;
+}
+
+/* ------------------ Règles custom (7) ------------------ */
+function addCustomRule() {
+  const inp = el('customRule');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  rules.unshift(txt);
+  const ul = el('rulesList').querySelector('ul');
+  const li = document.createElement('li'); li.textContent = `• ${txt}`;
+  ul.prepend(li);
+  inp.value='';
+}
+
+/* ------------------ Tests (Diagnostics) ------------------ */
+function diagLog(ok, label, detail=''){
+  const ul = document.querySelector('#diagList');
+  const li = document.createElement('li');
+  li.className = ok? 'pass' : 'fail';
+  li.textContent = (ok? '✔ ' : '✖ ') + label + (detail? ' — ' + detail : '');
+  ul.appendChild(li);
+}
+function runDiagnostics(){
+  const cont = document.querySelector('#diagList');
+  if (cont) cont.innerHTML='';
+  const snapshot = {
+    cardHTML: el('card').innerHTML,
+    bannedWords: [...bannedWords],
+    bannedStatus: el('bannedWord').textContent
+  };
+  try {
+    const d = buildDeck();
+    if (cont){ diagLog(d.length===52, 'Le paquet contient 52 cartes'); }
+
+    const bySuit = d.reduce((m,c)=>{ m[c.suit] = (m[c.suit]||0)+1; return m; },{});
+    const suitOK = Object.values(bySuit).every(n=>n===13);
+    if (cont){ diagLog(suitOK, 'Répartition: 13 par symbole'); }
+
+    const card = { rank:'Q', suit:'♥', suitName:'Cœur', color:'rouge' };
+    renderCardText(card);
+    const txt = el('card').innerText.trim();
+    if (cont){ diagLog(txt.includes('D') && txt.includes('♥'), 'Affichage texte: Dame -> "D" + emoji'); }
+
+    const before = bannedWords.length;
+    bannedWords = [];
+    renderBannedList(); renderBannedStatus();
+    const bi = el('bannedInput'); if (bi) bi.value = 'testban';
+    addBannedWord();
+    if (cont){ diagLog(bannedWords.length===before+1 || bannedWords.length===1, 'Ajout de mot banni (UI)'); }
+  } catch(e){
+    if (cont){ diagLog(false, 'Exception dans les tests', e.message || String(e)); }
+  } finally {
+    el('card').innerHTML = snapshot.cardHTML;
+    bannedWords = snapshot.bannedWords;
+    renderBannedList();
+    el('bannedWord').textContent = snapshot.bannedStatus;
+  }
+}
+
+/* ------------------ Listeners (Pointer Events friendly) ------------------ */
+function bindButton(id, handler){
+  const node = el(id);
+  if(!node) return;
+
+  let last = 0;
+  const activate = (e)=>{
+    const now = Date.now();
+    if (now - last < 350) return; // anti double déclenchement
+    last = now;
+    if (e.type === 'pointerup' && e.pointerType === 'mouse' && e.button !== 0) return;
+    handler(e);
+  };
+
+  node.addEventListener('pointerup', activate);
+  node.addEventListener('click', activate);
+}
+
+/* ---- Popup Règles (ouverture/fermeture + accessibilité) ---- */
+const rulesModal = document.getElementById('rulesModal');
+function openRules(){
+  if (!rulesModal) return;
+  rulesModal.classList.add('show');
+  rulesModal.setAttribute('aria-hidden','false');
+  document.body.style.overflow = 'hidden';
+}
+function closeRules(){
+  if (!rulesModal) return;
+  rulesModal.classList.remove('show');
+  rulesModal.setAttribute('aria-hidden','true');
+  document.body.style.overflow = '';
+}
+// Fermer sur clic en dehors de la boîte
+rulesModal.addEventListener('click', (e)=>{
+  if (e.target === rulesModal) closeRules();
+});
+// Fermer sur Échap
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'Escape' && rulesModal.classList.contains('show')) closeRules();
+});
+
+bindButton('addPlayer', ()=>{
+  const name = el('playerName').value.trim();
+  if (!name) return;
+  if (players.includes(name)) { alert('Ce prénom est déjà ajouté.'); return; }
+  players.push(name);
+  el('playerName').value='';
+  renderPlayers();
+});
+bindButton('clearPlayers', ()=>{ players=[]; renderPlayers(); });
+bindButton('nextPlayer', ()=>{ if (players.length){ playerIndex=(playerIndex+1)%players.length; fillPlayerSelect(); } });
+el('currentPlayer').addEventListener('change', (e)=>{ playerIndex = parseInt(e.target.value,10)||0; });
+bindButton('draw', drawCard);
+bindButton('newGame', newGame);
+bindButton('resetDeck', resetDeckSameOrder);
+bindButton('chooseDuel', chooseDuel);
+bindButton('addRule', addCustomRule);
+bindButton('addBanned', addBannedWord);
+bindButton('showRules', openRules);
+bindButton('closeRules', closeRules);
+
+/* ------------------ Démarrage ------------------ */
+newGame();
+runDiagnostics();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+  });
+}
+</script>
+
+</body>
+</html>
